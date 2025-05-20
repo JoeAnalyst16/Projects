@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendario Interactivo Avanzado</title>
+  <style>
+    :root {
+      --primary-color: #77c25c;
+      --dark-bg: #002338;
+      --darker-bg: #011c2d;
+      --day-bg: #004060;
+      --text-color: #ffffff;
+      --highlight-color: #ff9f43;
+      --event-color-1: #ff6b6b;
+      --event-color-2: #48dbfb;
+      --event-color-3: #feca57;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--dark-bg);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      position: relative;
+      transition: background-color 0.3s ease;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      background-color: var(--primary-color);
+      color: var(--dark-bg);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+    }
+
+    .mascot {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 150px;
+      z-index: 99;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    .calendar-container {
+      background-color: var(--dark-bg);
+      opacity: 0.95;
+      border-radius: 15px;
+      padding: 25px;
+      max-width: 800px;
+      margin: 100px auto 40px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+    }
+
+    .calendar-header button {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 5px 15px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .calendar-header button:hover {
+      background-color: rgba(119, 194, 92, 0.2);
+      transform: scale(1.1);
+    }
+
+    .view-toggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .view-toggle button {
+      background: var(--darker-bg);
+      border: none;
+      color: var(--text-color);
+      padding: 8px 16px;
+      margin: 0 5px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .view-toggle button.active {
+      background-color: var(--primary-color);
+      color: var(--dark-bg);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .day-name {
+      font-weight: bold;
+      text-align: center;
+      padding: 10px 5px;
+      color: var(--text-color);
+    }
+
+    .day {
+      text-align: center;
+      padding: 15px 5px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background-color: var(--day-bg);
+      position: relative;
+      overflow: hidden;
+      height: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .day:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .day.active {
+      background-color: var(--primary-color);
+      color: var(--dark-bg);
+      font-weight: bold;
+      transform: scale(1.05);
+    }
+
+    .day.today {
+      border: 2px solid var(--highlight-color);
+    }
+
+    .inactive {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .day .event-indicator {
+      height: 5px;
+      width: 5px;
+      border-radius: 50%;
+      margin: 2px;
+      display: inline-block;
+    }
+
+    .event-dot-container {
+      position: absolute;
+      bottom: 5px;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .notes {
+      margin-top: 25px;
+      background: var(--darker-bg);
+      padding: 20px;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .notes textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+      font-family: inherit;
+      resize: none;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .notes textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    .notes-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .notes button {
+      padding: 10px 20px;
+      background-color: var(--primary-color);
+      border: none;
+      color: var(--dark-bg);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .notes button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .note-category {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .category-btn {
+      padding: 5px 10px;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.3s ease;
+    }
+
+    .category-btn.active {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .category-btn:nth-child(1) {
+      background-color: var(--event-color-1);
+      color: white;
+    }
+
+    .category-btn:nth-child(2) {
+      background-color: var(--event-color-2);
+      color: var(--dark-bg);
+    }
+
+    .category-btn:nth-child(3) {
+      background-color: var(--event-color-3);
+      color: var(--dark-bg);
+    }
+
+    /* Lista de eventos */
+    .events-list {
+      margin-top: 25px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: var(--event-color-1);
+      transform: scale(1.2);
+    }
+
+    /* Vista año */
+    .year-view {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .month-card {
+      background-color: var(--darker-bg);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .month-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .month-card h3 {
+      text-align: center;
+      color: var(--primary-color);
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      font-size: 0.7rem;
+      gap: 2px;
+    }
+
+    .mini-day {
+      text-align: center;
+      padding: 2px;
+      border-radius: 3px;
+    }
+
+    .mini-day.has-event {
+      background-color: rgba(119, 194, 92, 0.3);
+    }
+
+    /* Tema claro */
+    body.light-theme {
+      --dark-bg: #f0f5ff;
+      --darker-bg: #e1e9ff;
+      --day-bg: #ffffff;
+      --text-color: #333333;
+    }
+
+    /* Weather widget */
+    .weather-widget {
+      background: var(--darker-bg);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .weather-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    
+    .weather-icon {
+      font-size: 2.5rem;
+    }
+
+    /* Animaciones */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .calendar-container {
+        padding: 15px;
+        margin-top: 70px;
+      }
+      
+      .day {
+        padding: 8px 5px;
+        height: 20px;
+      }
+      
+      .year-view {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle">🌓</button>
+  <img src="https://media.licdn.com/dms/image/v2/D4E22AQFxQZeIvf0ItA/feedshare-shrink_800/B4EZWWOOTcHMAg-/0/1741982066710?e=1750291200&v=beta&t=u1USrhM8PZSo6aNSpdCmegWCnXiHZH2b87wmuK54e00" alt="Nortín Verde" class="mascot">
+
+  <div class="calendar-container">
+    <div class="weather-widget" id="weatherWidget">
+      <h3>Clima hoy</h3>
+      <div class="weather-info">
+        <div class="weather-icon">☀️</div>
+        <div class="weather-data">
+          <p><strong>25°C</strong> - Soleado</p>
+          <p>Humedad: 55% | Viento: 12 km/h</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-toggle">
+      <button id="dayViewBtn" class="active">Mes</button>
+      <button id="yearViewBtn">Año</button>
+    </div>
+    
+    <div class="calendar-header">
+      <button id="prevMonth">&lt;</button>
+      <h2 id="currentMonth"></h2>
+      <button id="nextMonth">&gt;</button>
+    </div>
+    
+    <div id="monthView">
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+    
+    <div id="yearView" style="display: none">
+      <div class="year-view" id="yearGrid"></div>
+    </div>
+
+    <div class="notes">
+      <h3>Notas del día: <span id="selectedDateDisplay"></span></h3>
+      
+      <div class="note-category">
+        <button class="category-btn active" data-category="personal">Personal</button>
+        <button class="category-btn" data-category="trabajo">Trabajo</button>
+        <button class="category-btn" data-category="importante">Importante</button>
+      </div>
+      
+      <textarea id="noteInput" placeholder="Escribe tu nota aquí..."></textarea>
+      
+      <div class="notes-buttons">
+        <button onclick="saveNote()">Guardar Nota</button>
+        <button onclick="clearNote()">Borrar Nota</button>
+        <button onclick="shareCalendar()">Compartir</button>
+        <button onclick="toggleWeather()">Ver Clima</button>
+      </div>
+
+      <div class="events-list" id="eventsList"></div>
+    </div>
+  </div>
+
+  <script>
+    const currentMonthElement = document.getElementById('currentMonth');
+    const calendarGridElement = document.getElementById('calendarGrid');
+    const yearGridElement = document.getElementById('yearGrid');
+    const prevMonthButton = document.getElementById('prevMonth');
+    const nextMonthButton = document.getElementById('nextMonth');
+    const noteInput = document.getElementById('noteInput');
+    const selectedDateDisplay = document.getElementById('selectedDateDisplay');
+    const eventsListElement = document.getElementById('eventsList');
+    const dayViewBtn = document.getElementById('dayViewBtn');
+    const yearViewBtn = document.getElementById('yearViewBtn');
+    const monthView = document.getElementById('monthView');
+    const yearView = document.getElementById('yearView');
+    const themeToggle = document.getElementById('themeToggle');
+    const weatherWidget = document.getElementById('weatherWidget');
+    
+    let currentDate = new Date();
+    let selectedDate = null;
+    let selectedCategory = 'personal';
+    let events = JSON.parse(localStorage.getItem('calendarEvents')) || {};
+
+    // Botones de categoría
+    document.querySelectorAll('.category-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedCategory = btn.dataset.category;
+        if (selectedDate) {
+          showNoteForDate(selectedDate);
+        }
+      });
+    });
+
+    // Inicializar calendario
+    function init() {
+      renderCalendar();
+      renderYearView();
+      
+      if (!selectedDate) {
+        const today = new Date();
+        selectedDate = formatDate(today);
+        showNoteForDate(selectedDate);
+      }
+      
+      // Comprobar tema guardado
+      const savedTheme = localStorage.getItem('calendarTheme');
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        themeToggle.textContent = '🌙';
+      }
+    }
+
+    // Cambiar entre mes y año
+    dayViewBtn.addEventListener('click', () => {
+      dayViewBtn.classList.add('active');
+      yearViewBtn.classList.remove('active');
+      monthView.style.display = 'block';
+      yearView.style.display = 'none';
+    });
+
+    yearViewBtn.addEventListener('click', () => {
+      yearViewBtn.classList.add('active');
+      dayViewBtn.classList.remove('active');
+      monthView.style.display = 'none';
+      yearView.style.display = 'block';
+      renderYearView();
+    });
+
+    // Cambiar tema
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      if (document.body.classList.contains('light-theme')) {
+        themeToggle.textContent = '🌙';
+        localStorage.setItem('calendarTheme', 'light');
+      } else {
+        themeToggle.textContent = '🌓';
+        localStorage.setItem('calendarTheme', 'dark');
+      }
+    });
+
+    // Renderizar calendario mensual
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+      currentMonthElement.textContent = `${monthNames[month]} ${year}`;
+      calendarGridElement.innerHTML = '';
+
+      // Nombres de los días
+      dayNames.forEach(name => {
+        const dayNameElement = document.createElement('div');
+        dayNameElement.classList.add('day-name');
+        dayNameElement.textContent = name;
+        calendarGridElement.appendChild(dayNameElement);
+      });
+
+      // Días vacíos al inicio
+      for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement('div');
+        empty.classList.add('day', 'inactive');
+        calendarGridElement.appendChild(empty);
+      }
+
+      // Días del mes
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement('div');
+        cell.classList.add('day');
+        cell.textContent = day;
+        
+        const dateString = formatDate(new Date(year, month, day));
+        
+        // Verificar si es hoy
+        const today = new Date();
+        if (today.getDate() === day && today.getMonth() === month && today.getFullYear() === year) {
+          cell.classList.add('today');
+        }
+        
+        // Verificar si está seleccionado
+        if (selectedDate === dateString) {
+          cell.classList.add('active');
+        }
+        
+        // Verificar si tiene eventos
+        if (events[dateString]) {
+          const dotContainer = document.createElement('div');
+          dotContainer.classList.add('event-dot-container');
+          
+          // Mostrar indicadores de categorías
+          const categories = {};
+          events[dateString].forEach(event => {
+            categories[event.category] = true;
+          });
+          
+          Object.keys(categories).forEach(category => {
+            const dot = document.createElement('div');
+            dot.classList.add('event-indicator');
+            
+            if (category === 'personal') dot.style.backgroundColor = 'var(--event-color-1)';
+            else if (category === 'trabajo') dot.style.backgroundColor = 'var(--event-color-2)';
+            else if (category === 'importante') dot.style.backgroundColor = 'var(--event-color-3)';
+            
+            dotContainer.appendChild(dot);
+          });
+          
+          cell.appendChild(dotContainer);
+        }
+
+        cell.addEventListener('click', () => {
+          document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
+          cell.classList.add('active');
+          selectedDate = dateString;
+          selectedDateDisplay.textContent = formatDisplayDate(selectedDate);
+          showNoteForDate(selectedDate);
+        });
+
+        calendarGridElement.appendChild(cell);
+      }
+    }
+
+    // Vista año
+    function renderYearView() {
+      yearGridElement.innerHTML = '';
+      const year = currentDate.getFullYear();
+      const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        
+      for (let m = 0; m < 12; m++) {
+        const monthCard = document.createElement('div');
+        monthCard.classList.add('month-card');
+        
+        const monthTitle = document.createElement('h3');
+        monthTitle.textContent = monthNames[m];
+        monthCard.appendChild(monthTitle);
+        
+        const miniGrid = document.createElement('div');
+        miniGrid.classList.add('mini-grid');
+        
+        // Primera fila - días
+        ['D', 'L', 'M', 'X', 'J', 'V', 'S'].forEach(day => {
+          const dayEl = document.createElement('div');
+          dayEl.textContent = day;
+          miniGrid.appendChild(dayEl);
+        });
+        
+        // Calcular días
+        const firstDay = new Date(year, m, 1).getDay();
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        
+        // Días vacíos al inicio
+        for (let i = 0; i < firstDay; i++) {
+          const empty = document.createElement('div');
+          empty.classList.add('mini-day', 'inactive');
+          miniGrid.appendChild(empty);
+        }
+        
+        // Días del mes
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayEl = document.createElement('div');
+          dayEl.classList.add('mini-day');
+          dayEl.textContent = day;
+          
+          const dateString = formatDate(new Date(year, m, day));
+          
+          // Verificar si tiene eventos
+          if (events[dateString]) {
+            dayEl.classList.add('has-event');
+          }
+          
+          miniGrid.appendChild(dayEl);
+        }
+        
+        monthCard.appendChild(miniGrid);
+        
+        // Evento de clic en mes
+        monthCard.addEventListener('click', () => {
+          currentDate = new Date(year, m, 1);
+          renderCalendar();
+          dayViewBtn.click(); // Cambiar a vista mensual
+        });
+        
+        yearGridElement.appendChild(monthCard);
+      }
+    }
+
+    // Formato de fecha para almacenamiento YYYY-MM-DD
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Formato de fecha para mostrar
+    function formatDisplayDate(dateString) {
+      const [year, month, day] = dateString.split('-');
+      const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      return `${day} de ${monthNames[parseInt(month) - 1]} de ${year}`;
+    }
+
+    // Mostrar notas para una fecha
+    function showNoteForDate(dateString) {
+      selectedDateDisplay.textContent = formatDisplayDate(dateString);
+      noteInput.value = '';
+      renderEventsList(dateString);
+    }
+
+    // Guardar nota
+    function saveNote() {
+      if (!selectedDate || !noteInput.value.trim()) return;
+      
+      if (!events[selectedDate]) {
+        events[selectedDate] = [];
+      }
+      
+      const newEvent = {
+        id: Date.now(),
+        text: noteInput.value.trim(),
+        category: selectedCategory,
+        timestamp: new Date().toISOString()
+      };
+      
+      events[selectedDate].push(newEvent);
+      localStorage.setItem('calendarEvents', JSON.stringify(events));
+      
+      noteInput.value = '';
+      renderEventsList(selectedDate);
+      renderCalendar();
+      
+      // Añadir animación de confirmación
+      const saveButton = document.querySelector('.notes-buttons button:first-child');
+      saveButton.textContent = '¡Guardado!';
+      saveButton.classList.add('pulse');
+      setTimeout(() => {
+        saveButton.textContent = 'Guardar Nota';
+        saveButton.classList.remove('pulse');
+      }, 2000);
+    }
+
+    // Borrar nota
+    function clearNote() {
+      noteInput.value = '';
+    }
+
+    // Borrar evento
+    function deleteEvent(dateString, eventId) {
+      if (events[dateString]) {
+        events[dateString] = events[dateString].filter(event => event.id !== eventId);
+        
+        if (events[dateString].length === 0) {
+          delete events[dateString];
+        }
+        
+        localStorage.setItem('calendarEvents', JSON.stringify(events));
+        renderEventsList(dateString);
+        renderCalendar();
+      }
+    }
+
+    // Mostrar lista de eventos
+    function renderEventsList(dateString) {
+      eventsListElement.innerHTML = '';
+      
+      if (!events[dateString] || events[dateString].length === 0) {
+        eventsListElement.innerHTML = '<p>No hay eventos para este día.</p>';
+        return;
+      }
+      
+      const filteredEvents = events[dateString].filter(event => {
+        return selectedCategory === 'all' || event.category === selectedCategory;
+      });
+      
+      if (filteredEvents.length === 0) {
+        eventsListElement.innerHTML = `<p>No hay eventos de tipo "${selectedCategory}" para este día.</p>`;
+        return;
+      }
+      
+      filteredEvents.forEach(event => {
+        const eventItem = document.createElement('div');
+        eventItem.classList.add('event-item');
+        
+        // Color según categoría
+        if (event.category === 'personal') {
+          eventItem.style.backgroundColor = 'var(--event-color-1)';
+          eventItem.style.color = 'white';
+        } else if (event.category === 'trabajo') {
+          eventItem.style.backgroundColor = 'var(--event-color-2)';
+          eventItem.style.color = 'var(--dark-bg)';
+        } else if (event.category === 'importante') {
+          eventItem.style.backgroundColor = 'var(--event-color-3)';
+          eventItem.style.color = 'var(--dark-bg)';
+        }
+        
+        const eventContent = document.createElement('div');
+        eventContent.textContent = event.text;
+        
+        const eventActions = document.createElement('div');
+        eventActions.classList.add('event-actions');
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.classList.add('delete-btn');
+        deleteButton.innerHTML = '❌';
+        deleteButton.addEventListener('click', () => deleteEvent(dateString, event.id));
+        
+        eventActions.appendChild(deleteButton);
+        eventItem.appendChild(eventContent);
+        eventItem.appendChild(eventActions);
+        eventsListElement.appendChild(eventItem);
+      });
+    }
+
+    // Compartir calendario
+    function shareCalendar() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Mi Calendario',
+          text: `Mira mi calendario para ${formatDisplayDate(selectedDate)}`,
+          url: window.location.href
+        })
+        .catch(error => console.error('Error al compartir:', error));
+      } else {
+        alert('Lo sentimos, la función de compartir no está disponible en tu navegador.');
+      }
+    }
+
+    // Toggle widget del clima
+    function toggleWeather() {
+      weatherWidget.style.display = weatherWidget.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Navegación de meses
+    prevMonthButton.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+
+    nextMonthButton.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // Para fechas con eventos, añadir indicadores visuales
+    function updateEventIndicators() {
+      const days = document.querySelectorAll('.day:not(.inactive):not(.day-name)');
+      days.forEach(day => {
+        const dayNum = parseInt(day.textContent);
+        if (!isNaN(dayNum)) {
+          const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
+          const dateString = formatDate(date);
+          
+          if (events[dateString] && events[dateString].length > 0) {
+            // Ya se maneja en renderCalendar
+          }
+        }
+      });
+    }
+
+    // Drag & Drop para eventos
+    let draggedEvent = null;
+
+    document.addEventListener('dragstart', e => {
+      if (e.target.classList.contains('event-item')) {
+        draggedEvent = {
+          dateString: selectedDate,
+          eventId: parseInt(e.target.dataset.eventId)
+        };
+      }
+    });
+
+    document.addEventListener('dragover', e => {
+      if (e.target.classList.contains('day') && !e.target.classList.contains('inactive')) {
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('drop', e => {
+      if (e.target.classList.contains('day') && !e.target.classList.contains('inactive') && draggedEvent) {
+        e.preventDefault();
+        
+        // Obtener la fecha de destino
+        const dayNum = parseInt(e.target.textContent);
+        const destDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
+        const destDateString = formatDate(destDate);
+        
+        // Mover evento
+        if (events[draggedEvent.dateString]) {
+          const eventIndex = events[draggedEvent.dateString].findIndex(event => event.id === draggedEvent.eventId);
+          
+          if (eventIndex !== -1) {
+            const event = events[draggedEvent.dateString][eventIndex];
+            
+            // Eliminar del origen
+            events[draggedEvent.dateString].splice(eventIndex, 1);
+            if (events[draggedEvent.dateString].length === 0) {
+              delete events[draggedEvent.dateString];
+            }
+            
+            // Añadir al destino
+            if (!events[destDateString]) {
+              events[destDateString] = [];
+            }
+            events[destDateString].push(event);
+            
+            // Guardar y actualizar
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+            renderCalendar();
+            
+            if (selectedDate === draggedEvent.dateString || selectedDate === destDateString) {
+              renderEventsList(selectedDate);
+            }
+          }
+        }
+        
+        draggedEvent = null;
+      }
+    });
+
+    // Exportar calendario
+    function exportCalendar() {
+      const data = JSON.stringify(events);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mi_calendario.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Importar calendario
+    function importCalendar() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = event => {
+          try {
+            const importedEvents = JSON.parse(event.target.result);
+            events = importedEvents;
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+            renderCalendar();
+            if (selectedDate) {
+              renderEventsList(selectedDate);
+            }
+            alert('Calendario importado correctamente');
+          } catch (error) {
+            alert('Error al importar el calendario');
+            console.error('Error al importar:', error);
+          }
+        };
+        reader.readAsText(file);
+      };
+      
+      input.click();
+    }
+
+    // Buscar eventos
+    function searchEvents() {
+      const searchTerm = prompt('Buscar eventos:');
+      if (!searchTerm || searchTerm.trim() === '') return;
+      
+      const results = [];
+      
+      // Buscar en todos los eventos
+      Object.keys(events).forEach(dateString => {
+        events[dateString].forEach(event => {
+          if (event.text.toLowerCase().includes(searchTerm.toLowerCase())) {
+            results.push({
+              date: dateString,
+              event
+            });
+          }
+        });
+      });
+      
+      // Mostrar resultados
+      if (results.length === 0) {
+        alert('No se encontraron eventos');
+        return;
+      }
+      
+      let resultsText = `Se encontraron ${results.length} eventos:\n\n`;
+      results.forEach((result, index) => {
+        resultsText += `${index + 1}. ${formatDisplayDate(result.date)}: ${result.event.text}\n`;
+      });
+      
+      alert(resultsText);
+      
+      // Ir a la primera fecha encontrada
+      if (results.length > 0) {
+        const firstResult = results[0];
+        const [year, month, day] = firstResult.date.split('-');
+        
+        currentDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        renderCalendar();
+        
+        selectedDate = firstResult.date;
+        document.querySelectorAll('.day').forEach(dayEl => {
+          if (!dayEl.classList.contains('inactive') && parseInt(dayEl.textContent) === parseInt(day)) {
+            dayEl.classList.add('active');
+          } else {
+            dayEl.classList.remove('active');
+          }
+        });
+        
+        showNoteForDate(selectedDate);
+      }
+    }
+
+    // Añadir botones de exportar, importar y buscar
+    function addExtraButtons() {
+      const buttonsContainer = document.querySelector('.notes-buttons');
+      
+      const exportBtn = document.createElement('button');
+      exportBtn.textContent = 'Exportar';
+      exportBtn.addEventListener('click', exportCalendar);
+      
+      const importBtn = document.createElement('button');
+      importBtn.textContent = 'Importar';
+      importBtn.addEventListener('click', importCalendar);
+      
+      const searchBtn = document.createElement('button');
+      searchBtn.textContent = 'Buscar';
+      searchBtn.addEventListener('click', searchEvents);
+      
+      buttonsContainer.appendChild(exportBtn);
+      buttonsContainer.appendChild(importBtn);
+      buttonsContainer.appendChild(searchBtn);
+    }
+
+    // Función para añadir eventos de teclado
+    function setupKeyboardShortcuts() {
+      document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault();
+          saveNote();
+        } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevMonthButton.click();
+        } else if (e.ctrlKey && e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextMonthButton.click();
+        } else if (e.ctrlKey && e.key === 'f') {
+          e.preventDefault();
+          searchEvents();
+        }
+      });
+    }
+
+    // Función para simular datos meteorológicos
+    function updateWeatherData() {
+      const weatherIcons = ['☀️', '⛅', '☁️', '🌧️', '⛈️', '❄️'];
+      const weatherConditions = ['Soleado', 'Parcialmente nublado', 'Nublado', 'Lluvia', 'Tormenta', 'Nieve'];
+      
+      const randomIndex = Math.floor(Math.random() * weatherIcons.length);
+      const temperature = Math.floor(Math.random() * 30) + 5; // Entre 5 y 35°C
+      const humidity = Math.floor(Math.random() * 60) + 30; // Entre 30% y 90%
+      const windSpeed = Math.floor(Math.random() * 30) + 5; // Entre 5 y 35 km/h
+      
+      const weatherIconElement = document.querySelector('.weather-icon');
+      const weatherDataElement = document.querySelector('.weather-data');
+      
+      weatherIconElement.textContent = weatherIcons[randomIndex];
+      weatherDataElement.innerHTML = `
+        <p><strong>${temperature}°C</strong> - ${weatherConditions[randomIndex]}</p>
+        <p>Humedad: ${humidity}% | Viento: ${windSpeed} km/h</p>
+      `;
+    }
+
+    // Función de recordatorios
+    function setupReminders() {
+      // Comprobar si hay eventos para hoy
+      const today = formatDate(new Date());
+      
+      if (events[today] && events[today].length > 0) {
+        // Solicitar permiso para notificaciones
+        if (Notification && Notification.permission !== 'granted') {
+          Notification.requestPermission();
+        }
+        
+        // Mostrar recordatorio
+        if (Notification && Notification.permission === 'granted') {
+          events[today].forEach(event => {
+            new Notification('Recordatorio', {
+              body: event.text,
+              icon: '/api/placeholder/64/64' // Placeholder para un icono
+            });
+          });
+        } else {
+          // Alternativa si no hay notificaciones
+          const todayEvents = events[today].map(e => e.text).join(', ');
+          const reminder = document.createElement('div');
+          reminder.style.position = 'fixed';
+          reminder.style.bottom = '20px';
+          reminder.style.right = '20px';
+          reminder.style.backgroundColor = 'var(--primary-color)';
+          reminder.style.color = 'var(--dark-bg)';
+          reminder.style.padding = '15px';
+          reminder.style.borderRadius = '10px';
+          reminder.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
+          reminder.style.zIndex = '1000';
+          reminder.innerHTML = `<strong>Recordatorio para hoy:</strong><br>${todayEvents}`;
+          
+          document.body.appendChild(reminder);
+          
+          // Eliminar después de 10 segundos
+          setTimeout(() => {
+            document.body.removeChild(reminder);
+          }, 10000);
+        }
+      }
+    }
+
+    // Inicializar todas las funciones
+    function initAll() {
+      init();
+      addExtraButtons();
+      setupKeyboardShortcuts();
+      updateWeatherData();
+      setupReminders();
+      
+      // Actualizar clima cada hora
+      setInterval(updateWeatherData, 3600000);
+      
+      // Mostrar la fecha seleccionada
+      selectedDate = formatDate(new Date());
+      selectedDateDisplay.textContent = formatDisplayDate(selectedDate);
+      showNoteForDate(selectedDate);
+    }
+
+    // Iniciar la aplicación
+    window.addEventListener('load', initAll);
+  </script>
+</body>
+</html>
